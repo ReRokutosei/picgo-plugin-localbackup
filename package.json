@@ -1,0 +1,31 @@
+{
+  "name": "@rerokutosei/picgo-plugin-localbackup",
+  "version": "1.0.0",
+  "description": "Local backup plugin for PicGo-Core",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "homepage": "https://github.com/ReRokutosei/picgo-plugin-localbackup",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "picgo",
+    "backup",
+    "local",
+    "picgo-plugin"
+  ],
+  "author": "ReRokutosei",
+  "license": "MIT",
+  "peerDependencies": {
+    "picgo": "^1.5.0"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  }
+}
