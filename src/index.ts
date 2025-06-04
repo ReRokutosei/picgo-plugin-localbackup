@@ -55,13 +55,26 @@ const handleBackup = async (ctx: IPicGo, outputItem: any): Promise<void> => {
             await fs.promises.mkdir(backupDir, { recursive: true })
         }
         
-        // 获取源文件路径和目标路径
-        const sourcePath = outputItem.buffer ? outputItem.buffer.path : (outputItem.fullPath || '')
-        if (!sourcePath) {
-            throw new Error('Source file path not found')
+        // 获取源文件路径
+        let sourcePath = ''
+        if (outputItem.buffer?.path) {
+            sourcePath = outputItem.buffer.path
+        } else if (outputItem.fullPath) {
+            sourcePath = outputItem.fullPath
+        } else if (typeof outputItem === 'string') {
+            sourcePath = outputItem
+        } else if (ctx.input?.[0]) {
+            sourcePath = ctx.input[0]
         }
+
+        if (!sourcePath || !fs.existsSync(sourcePath)) {
+            throw new Error(`Source file not found: ${sourcePath}`)
+        }
+
+        ctx.log.info(`Source file: ${sourcePath}`)
         
-        const targetFilename = outputItem.fileName
+        // 获取目标路径
+        const targetFilename = outputItem.fileName || path.basename(sourcePath)
         const targetPath = path.join(backupDir, targetFilename)
         
         // 创建日志目录
@@ -80,6 +93,10 @@ const handleBackup = async (ctx: IPicGo, outputItem: any): Promise<void> => {
             ctx.log.info('Move operation completed: ' + targetPath)
         }
         
+        // 更新输出项的路径
+        if (outputItem.buffer) {
+            outputItem.buffer.path = targetPath
+        }
         outputItem.fullPath = targetPath
     } catch (error) {
         ctx.log.error(`Backup operation failed: ${error}`)
