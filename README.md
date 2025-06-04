@@ -6,14 +6,12 @@
 
 - 在上传图片前自动备份到本地目录
 - 支持复制或剪切操作
-- 使用与 PicList 相同的重命名规则，确保本地备份与云端文件名一致性
 - 详细的日志记录系统
-- 适配阿里云等对中文文件名进行 URL 编码的图床服务
-- 完全不干扰 PicGo 原有的上传流程
+- 不干扰 PicList-Core 原有的上传流程
 
 ## 安装
 
-### 方式1：通过 npm 安装（推荐）
+### 通过 npm 安装
 
 ```bash
 # 全局安装 picgo
@@ -23,17 +21,16 @@ npm install picgo -g
 picgo install @rerokutosei/picgo-plugin-localbackup
 ```
 
-### 方式2：手动安装
-
-1. 克隆本仓库
-2. 在仓库目录下执行：
+## 配置插件
 ```bash
-npm install
-npm run build
-```
-3. 将生成的 `dist` 目录复制到 PicGo 的插件目录中
+# 配置插件
+picgo config plugin @rerokutosei/picgo-plugin-localbackup
 
-## 配置
+# 启用插件
+picgo use plugins @rerokutosei/picgo-plugin-localbackup
+```
+
+## 配置项
 
 插件提供以下配置项：
 
@@ -46,20 +43,6 @@ npm run build
 2. `operationType`: 操作类型（'copy' 或 'cut'）
    - copy: 复制原文件到备份目录（保留原文件）
    - cut: 移动原文件到备份目录（删除原文件）
-
-### 重要说明
-
-- 本插件现在使用 PicGo 的重命名系统，不再提供单独的重命名功能
-- 建议在 PicGo 配置中设置重命名模板为 `{uuid}`，这样可以：
-  1. 避免文件名冲突
-  2. 确保本地备份与云端文件保持一致性
-  3. 便于日后文件匹配和管理
-
-### 示例配置：
-
-```bash
-picgo set plugin @rerokutosei/picgo-plugin-localbackup
-```
 
 ## 日志系统
 
@@ -77,23 +60,6 @@ picgo set plugin @rerokutosei/picgo-plugin-localbackup
 ```
 2025-06-04T10:15:30.123Z Copied: C:\Users\Example\image.jpg -> D:\backup\c9549605-6017-454c-9743-34d40d158121.jpg
 ```
-
-## 最佳实践
-
-1. **备份目录设置**
-   - 建议使用绝对路径，例如：`D:\Pictures\Backup`
-   - 确保目录具有写入权限
-   - 避免使用系统关键目录
-
-2. **PicGo 配置建议**
-   - 设置 PicGo 的重命名格式为 `{uuid}`
-   - 启用图片压缩可以节省备份空间
-   - 推荐开启 webp 转换以获得更好的压缩率
-
-3. **使用场景**
-   - 图床迁移：备份可用于快速恢复或迁移
-   - 防止数据丢失：本地备份可作为云端数据的保障
-   - 批量处理：可以通过本地备份批量处理图片
 
 ## 开发
 
