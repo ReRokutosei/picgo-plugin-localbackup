@@ -2,6 +2,17 @@
 
 本地备份插件 for [PicList-Core](https://github.com/Kuingsmile/PicList-Core)
 
+- [PicList Local Backup Plugin](#piclist-local-backup-plugin)
+  - [功能特点](#功能特点)
+  - [安装](#安装)
+    - [通过 npm 安装](#通过-npm-安装)
+  - [配置插件](#配置插件)
+  - [配置项](#配置项)
+  - [日志系统](#日志系统)
+    - [日志示例](#日志示例)
+  - [开发](#开发)
+  - [License](#license)
+
 ## 功能特点
 
 - 在上传图片前自动备份到本地目录
