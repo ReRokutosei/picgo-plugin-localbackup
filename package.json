@@ -1,7 +1,7 @@
 {
   "name": "@rerokutosei/picgo-plugin-localbackup",
-  "version": "1.0.0",
-  "description": "Local backup plugin for PicGo-Core",
+  "version": "2.0.0",
+  "description": "Local backup plugin for PicList-Core with seamless PicList integration",
   "main": "dist/index.js",
   "files": [
     "dist"
