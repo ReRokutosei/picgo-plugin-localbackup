@@ -1,124 +1,139 @@
-import * as fs from 'fs'
+import { IPicGo } from 'picgo'
 import * as path from 'path'
-import { IHelper, IPicGo, IPluginConfig } from 'picgo'
+import { FileOperations } from './utils'
+import { CONFIG_PREFIX, IPluginUserConfig, pluginConfig, IConfig } from './types'
 
-// 插件配置定义
-const pluginConfig = (ctx: IPicGo): IPluginConfig[] => {
-    return [
-        {
-            name: '@rerokutosei/picgo-plugin-localbackup.backupDir',
-            type: 'input',
-            required: true,
-            default: './backup',
-            message: 'Backup directory path',
-            validate: (val: string): boolean => {
+class LocalBackupPlugin {
+    private fileOps: FileOperations | null = null
+    private originalPaths: string[] | null = null
+
+    constructor(private ctx: IPicGo) {}
+
+    private getConfig(): IPluginUserConfig {
+        const config = this.ctx.getConfig(CONFIG_PREFIX) as IConfig
+        if (!config || !config[CONFIG_PREFIX]) {
+            return {
+                backupDir: './backup',
+                operationType: 'copy'
+            }
+        }
+        return {
+            backupDir: config[CONFIG_PREFIX].backupDir || './backup',
+            operationType: config[CONFIG_PREFIX].operationType || 'copy'
+        }
+    }
+
+    private ensureFileOps(): FileOperations {
+        if (!this.fileOps) {
+            const config = this.getConfig()
+            this.fileOps = new FileOperations(config.backupDir)
+        }
+        return this.fileOps
+    }
+
+    async beforeUpload(ctx: IPicGo): Promise<void> {
+        try {
+            // 获取原始文件路径
+            const fileOps = this.ensureFileOps()
+            const originalPaths = fileOps.getOriginalFilePaths(ctx)
+
+            if (originalPaths.length === 0) {
+                ctx.log.info('No original files to process')
+                return
+            }
+
+            ctx.log.info(`Found ${originalPaths.length} original files`)
+
+            // 验证原始文件是否存在
+            for (const filePath of originalPaths) {
+                if (!await fileOps.pathExists(filePath)) {
+                    ctx.log.warn(`Original file not accessible: ${filePath}`)
+                    return
+                }
+                ctx.log.info(`Original file verified: ${filePath}`)
+
+                // 备份转换后的文件（使用原始文件名）
                 try {
-                    if (!fs.existsSync(val)) {
-                        fs.mkdirSync(val, { recursive: true })
-                    }
-                    return true
+                    await fileOps.backupTransformedFile(ctx, filePath)
+                    ctx.log.info(`Temporarily backed up transformed file for: ${filePath}`)
                 } catch (error) {
-                    return false
+                    ctx.log.error(`Failed to backup transformed file: ${error instanceof Error ? error.message : String(error)}`)
                 }
             }
-        },
-        {
-            name: '@rerokutosei/picgo-plugin-localbackup.operationType',
-            type: 'list',
-            required: true,
-            choices: [
-                { name: 'Copy', value: 'copy' },
-                { name: 'Cut', value: 'cut' }
-            ],
-            default: 'copy',
-            message: 'Operation type (Copy or Cut)'
-        }
-    ]
-}
 
-// 写入日志的函数
-const writeLog = async (logPath: string, message: string): Promise<void> => {
-    const timestamp = new Date().toISOString()
-    const logMessage = `${timestamp} ${message}\n`
-    await fs.promises.appendFile(logPath, logMessage)
-}
+            // 记录原始文件路径
+            this.originalPaths = originalPaths
 
-// 处理图片备份的函数
-const handleBackup = async (ctx: IPicGo, outputItem: any): Promise<void> => {
-    try {
-        // 获取配置参数
-        const backupDir = (ctx.getConfig('@rerokutosei/picgo-plugin-localbackup.backupDir') as string) || './backup'
-        const operationType = (ctx.getConfig('@rerokutosei/picgo-plugin-localbackup.operationType') as string) || 'copy'
-        
-        // 确保备份目录存在
-        if (!fs.existsSync(backupDir)) {
-            await fs.promises.mkdir(backupDir, { recursive: true })
+        } catch (error) {
+            ctx.log.error(`Error in beforeUpload: ${error instanceof Error ? error.message : String(error)}`)
         }
-        
-        // 获取源文件路径
-        let sourcePath = ''
-        if (outputItem.buffer?.path) {
-            sourcePath = outputItem.buffer.path
-        } else if (outputItem.fullPath) {
-            sourcePath = outputItem.fullPath
-        } else if (typeof outputItem === 'string') {
-            sourcePath = outputItem
-        } else if (ctx.input?.[0]) {
-            sourcePath = ctx.input[0]
-        }
-
-        if (!sourcePath || !fs.existsSync(sourcePath)) {
-            throw new Error(`Source file not found: ${sourcePath}`)
-        }
-
-        ctx.log.info(`Source file: ${sourcePath}`)
-        
-        // 获取目标路径
-        const targetFilename = outputItem.fileName || path.basename(sourcePath)
-        const targetPath = path.join(backupDir, targetFilename)
-        
-        // 创建日志目录
-        const logDir = path.join(backupDir, 'logs')
-        await fs.promises.mkdir(logDir, { recursive: true })
-        const logPath = path.join(logDir, `backup-${new Date().toISOString().split('T')[0]}.log`)
-        
-        // 执行备份操作
-        if (operationType === 'copy') {
-            await fs.promises.copyFile(sourcePath, targetPath)
-            await writeLog(logPath, `Copied: ${sourcePath} -> ${targetPath}`)
-            ctx.log.info('Backup operation completed: ' + targetPath)
-        } else {
-            await fs.promises.rename(sourcePath, targetPath)
-            await writeLog(logPath, `Moved: ${sourcePath} -> ${targetPath}`)
-            ctx.log.info('Move operation completed: ' + targetPath)
-        }
-        
-        // 更新输出项的路径
-        if (outputItem.buffer) {
-            outputItem.buffer.path = targetPath
-        }
-        outputItem.fullPath = targetPath
-    } catch (error) {
-        ctx.log.error(`Backup operation failed: ${error}`)
-        throw error
     }
-}
 
-// 插件主函数
-const handle = async (ctx: IPicGo): Promise<void> => {
-    for (const outputItem of ctx.output) {
-        await handleBackup(ctx, outputItem)
+    async afterUpload(ctx: IPicGo): Promise<void> {
+        try {
+            if (!this.originalPaths || this.originalPaths.length === 0) {
+                return
+            }
+
+            const config = this.getConfig()
+            const fileOps = this.ensureFileOps()            // 获取上传后的URL并重命名备份文件
+            if (Array.isArray(ctx.output) && ctx.output.length > 0) {
+                // 遍历所有已上传的文件
+                for (let i = 0; i < ctx.output.length; i++) {
+                    const uploadInfo = ctx.output[i]
+                    const originalPath = this.originalPaths?.[i]
+                    
+                    if (uploadInfo.imgUrl && originalPath) {
+                        try {
+                            await fileOps.renameBackupWithUUID(originalPath, uploadInfo.imgUrl)
+                            ctx.log.info(`Successfully renamed backup file with UUID for ${originalPath}`)
+                        } catch (error) {
+                            ctx.log.error(`Failed to rename backup file for ${originalPath}: ${error instanceof Error ? error.message : String(error)}`)
+                        }
+                    }
+                }
+            }
+
+            // 如果是剪切模式，删除原始文件
+            if (config.operationType === 'cut') {
+                ctx.log.info('Moving original files to system trash...')
+                for (const filePath of this.originalPaths) {
+                    try {
+                        await fileOps.moveToTrash(filePath)
+                        ctx.log.info(`Moved original file to system trash: ${filePath}`)
+                    } catch (error) {
+                        ctx.log.error(`Failed to move original file ${filePath} to trash: ${error instanceof Error ? error.message : String(error)}`)
+                    }
+                }
+            }
+        } catch (error) {
+            ctx.log.error(`Error in afterUpload: ${error instanceof Error ? error.message : String(error)}`)
+        } finally {
+            // 清理状态
+            this.originalPaths = null
+            if (this.fileOps) {
+                this.fileOps.clearTempBackups()
+                this.fileOps = null
+            }
+        }
+    }
+
+    register(): void {
+        this.ctx.helper.beforeUploadPlugins.register(CONFIG_PREFIX, {
+            handle: (ctx) => this.beforeUpload(ctx)
+        })
+        this.ctx.helper.afterUploadPlugins.register(CONFIG_PREFIX, {
+            handle: (ctx) => this.afterUpload(ctx)
+        })
     }
 }
 
 export = (ctx: IPicGo) => {
-    const register = (): void => {
-        ctx.helper.beforeUploadPlugins.register('@rerokutosei/picgo-plugin-localbackup', {
-            handle
-        })
-    }
     return {
-        register,
+        register: () => {
+            const plugin = new LocalBackupPlugin(ctx)
+            plugin.register()
+        },
         config: pluginConfig
     }
 }
