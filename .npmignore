@@ -1,0 +1,16 @@
+node_modules/
+PicList-Core-copy/
+src/
+*.log
+.env
+.env.local
+*.json
+.gitattributes
+.travis.yml
+*.html
+*.tgz
+*.md
+.gitattributes
+!dist/
+!README.md
+!package.json
