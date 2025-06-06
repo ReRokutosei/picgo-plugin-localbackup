@@ -20,7 +20,7 @@
   "author": "ReRokutosei",
   "license": "MIT",
   "peerDependencies": {
-    "piclist-core": ">=1.9.11"
+    "piclist": ">=1.9.11"
   },
   "type": "commonjs",
   "devDependencies": {
