@@ -13,14 +13,13 @@
   },
   "keywords": [
     "picgo",
-    "backup",
-    "local",
+    "localbackup",
     "picgo-plugin"
   ],
   "author": "ReRokutosei",
   "license": "MIT",
   "peerDependencies": {
-    "picgo": "^1.5.0"
+    "piclist-core": ">=1.9.11"
   },
   "type": "commonjs",
   "devDependencies": {
