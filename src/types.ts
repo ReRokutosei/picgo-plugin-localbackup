@@ -1,4 +1,4 @@
-import { IPluginConfig } from 'picgo'
+import { IPluginConfig } from 'piclist'
 
 export interface IPluginUserConfig {
     backupDir: string

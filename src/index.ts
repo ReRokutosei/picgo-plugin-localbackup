@@ -1,4 +1,4 @@
-import { IPicGo } from 'picgo'
+import { IPicGo } from 'piclist'
 import * as path from 'path'
 import { FileOperations } from './utils'
 import { CONFIG_PREFIX, IPluginUserConfig, pluginConfig, IConfig } from './types'
